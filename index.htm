@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    table {
+      /* border-collapse: collapse; */
+
+      width: 100%;
+    }
+
+    th,
+    td {
+      border: 1px solid #999999;
+
+      text-align: center;
+      padding: 8px;
+    }
+
+
+
+    th {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+
+
+
+
+    select,
+    input {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      background-color: #fff;
+    }
+
+    .form {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      background-color: #ddd;
+    }
+
+    button {
+      border-radius: 8px;
+      padding: 10px 20px;
+      background-color: dodgerblue;
+      border: 1px solid #ddd;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:disabled,
+    button[disabled] {
+      border: 1px solid #999999;
+      background-color: #cccccc;
+      color: #666666;
+    }
+
+    button:active,
+    button:focus,
+    button:focus-visible {
+
+      background-color: #000000;
+    }
+
+    #myDiv {
+      display: block;
+      text-align: center;
+    }
+
+    /* The Modal (background) */
+    .modal {
+      display: none;
+      /* Hidden by default */
+      position: fixed;
+      /* Stay in place */
+      z-index: 1;
+      /* Sit on top */
+      padding-top: 100px;
+      /* Location of the box */
+      left: 0;
+      top: 0;
+      width: 100%;
+      /* Full width */
+      height: 100%;
+      /* Full height */
+      overflow: auto;
+      /* Enable scroll if needed */
+      background-color: rgb(0, 0, 0);
+      /* Fallback color */
+      background-color: rgba(0, 0, 0, 0.9);
+      /* Black w/ opacity */
+    }
+
+    /* Modal Content (image) */
+    .modal-content {
+      margin: auto;
+      display: block;
+      width: 95%;
+      max-width: 95%;
+    }
+
+    /* Caption of Modal Image */
+    #caption {
+      margin: auto;
+      display: block;
+      width: 95%;
+      max-width: 95%;
+      text-align: center;
+      color: #ccc;
+      padding: 10px 0;
+      height: 150px;
+    }
+
+    /* Add Animation */
+    .modal-content,
+    #caption {
+      -webkit-animation-name: zoom;
+      -webkit-animation-duration: 0.6s;
+      animation-name: zoom;
+      animation-duration: 0.6s;
+    }
+
+    @-webkit-keyframes zoom {
+      from {
+        -webkit-transform: scale(0)
+      }
+
+      to {
+        -webkit-transform: scale(1)
+      }
+    }
+
+    @keyframes zoom {
+      from {
+        transform: scale(0)
+      }
+
+      to {
+        transform: scale(1)
+      }
+    }
+
+    /* The Close Button */
+    .close {
+      position: absolute;
+      top: 15px;
+      right: 35px;
+      color: #f1f1f1;
+      font-size: 40px;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: #bbb;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    /* 100% Image Width on Smaller Screens */
+    @media only screen and (max-width: 700px) {
+      .modal-content {
+        width: 100%;
+      }
+    }
+  </style>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+  <title>Telemetry</title>
+</head>
+
+<body>
+  <div class="form">
+    <label for="start">Start Date:</label>
+    <input type="date" id="start" name="start">
+    <label for="end">End Date:</label>
+
+    <input type="date" id="end" name="end">
+
+    <button id="search">Search</button>
+    <button id="download" style="background-color: red;">Download all result images shown on this page</button>
+
+  </div>
+
+
+  <div id="myDiv">
+    <table>
+      <thead>
+        <tr>
+
+          <th>
+            Hostname
+          </th>
+          <th>
+            Site
+          </th>
+          <th>
+            Score
+          </th>
+          <th>
+            Time (second)
+          </th>
+          <th>
+            Tested on
+          </th>
+          <th>
+            Image(Tap to zoom)
+          </th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="form">
+
+    <button id="previous">previous</button>
+
+    <button id="next">next</button>
+    <label for="recordsperpage">Records per page:</label>
+
+    <select name="recordsperpage" id="recordsperpage">
+      <option value="10" selected>10</option>
+      <option value="20">20</option>
+      <option value="50">50</option>
+      <option value="100">100</option>
+    </select>
+    <p id="pageNo"></p>
+  </div>
+
+  <!-- The Modal -->
+  <div id="myModal" class="modal">
+    <span class="close">&times;</span>
+    <img class="modal-content" id="img01">
+    <div id="caption"></div>
+  </div>
+
+  <script>
+
+    $('#search').click(function () {
+      removeAllChildNodes(tab)
+      $.ajax({
+        url: "/fetchByDate",
+        type: 'POST',
+        data: {
+          "start": $("#start").val(),
+          "end": $("#end").val()
+
+        },
+        success: function (data) {
+          console.log('form submitted.');
+          for (item of data) {
+            createTable(item)
+          }
+        }
+      });
+      return false;
+    });
+    $('#download').click(() => {
+      var images = $("td img")
+      for (let im of images) {
+        fetch(im.src).then(res => res.blob()).then(file => {
+          var a = document.createElement("a"),
+            url = URL.createObjectURL(file);
+          a.href = url;
+          a.id = "image"
+          a.download = "image";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        })
+
+
+      }
+
+    })
+
+    var tab, modal, modalImg;
+    var page = 1, recordsperpage = 10;
+    $('#recordsperpage').on('change', function () {
+      recordsperpage = this.value;
+      removeAllChildNodes(tab)
+
+      readStats()
+    });
+    $("#pageNo").text("Page : " + page)
+    tab = document.getElementsByTagName("tbody")[0];
+    readStats()
+
+
+    modal = document.getElementById("myModal");
+    modalImg = document.getElementById("img01");
+    var span = document.getElementsByClassName("close")[0];
+
+    // When the user clicks on <span> (x), close the modal
+    span.onclick = function () {
+      modal.style.display = "none";
+    }
+    function readStats() {
+
+      $.get("/read/" + page + "/" + recordsperpage, function (data, status) {
+        if (status === "success") {
+
+          for (item of data) {
+            createTable(item)
+          }
+        }
+      })
+    }
+    document.getElementById("previous").addEventListener("click", () => {
+
+      removeAllChildNodes(tab)
+      page = page - 1;
+
+
+      $("#pageNo").text("Page : " + page)
+
+
+
+
+      readStats()
+    })
+    document.getElementById("next").addEventListener("click", () => {
+
+      removeAllChildNodes(tab)
+      page = page + 1
+      $("#pageNo").text("Page : " + page)
+
+
+
+      readStats()
+    })
+    function removeAllChildNodes(parent) {
+      while (parent.firstChild) {
+        parent.removeChild(parent.firstChild);
+      }
+    }
+
+    function createTable(item) {
+
+      let tr = document.createElement("tr");
+      let hostname = document.createElement("td");
+      let site = document.createElement("td");
+      let score = document.createElement("td");
+      let time = document.createElement("td");
+      let testing_time = document.createElement("td");
+      let image = document.createElement("td");
+
+      tr.appendChild(hostname)
+      tr.appendChild(site)
+      tr.appendChild(score)
+      tr.appendChild(time)
+      tr.appendChild(testing_time)
+      tr.appendChild(image)
+
+      hostname.innerHTML = item.hostname
+      site.innerHTML = item.site
+      score.innerHTML = item.score
+      time.innerHTML = parseFloat(item.time).toFixed(2)
+      testing_time.innerHTML = new Date(Date.parse(item.created_at)).toLocaleString()
+
+
+      var img = document.createElement("img");
+      img.onclick = function () {
+        modal.style.display = "block";
+        modalImg.src = this.src;
+      }
+
+
+      img.src = item.base64;
+
+      img.style.width = "200px";
+      image.appendChild(img);
+      tab.appendChild(tr);
+
+    }
+
+  </script>
+</body>
+
+</html>
